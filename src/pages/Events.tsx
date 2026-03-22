@@ -21,6 +21,7 @@ export function Events({ searchQuery }: EventsProps) {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [myClubs, setMyClubs] = useState<Club[]>([]);
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [rsvpIds, setRsvpIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'my-clubs'>('upcoming');
   const [loading, setLoading] = useState(true);
@@ -35,20 +36,29 @@ export function Events({ searchQuery }: EventsProps) {
 
   async function loadData() {
     const now = new Date().toISOString();
-    const [eventsRes, rsvpsRes, memberRes] = await Promise.all([
+    const [eventsRes, rsvpsRes, memberRes, allClubsRes] = await Promise.all([
       supabase.from('events').select('*').gte('start_time', now).order('start_time', { ascending: true }).limit(50),
       user ? supabase.from('event_rsvps').select('event_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
-      user ? supabase.from('club_members').select('clubs(*), role').eq('user_id', user.id).eq('status', 'active') : Promise.resolve({ data: [] }),
+      user ? supabase.from('club_members').select('club_id, role').eq('user_id', user.id).eq('status', 'active') : Promise.resolve({ data: [] }),
+      supabase.from('clubs').select('*').eq('is_public', true).eq('is_active', true).order('name', { ascending: true }),
     ]);
 
     setEvents((eventsRes.data as Event[]) || []);
     setRsvpIds(new Set((rsvpsRes.data || []).map((r: { event_id: string }) => r.event_id)));
+    setAllClubs((allClubsRes.data as Club[]) || []);
 
-    const clubs = ((memberRes.data || []) as { clubs: Club; role: string }[])
-      .filter(m => m.clubs)
-      .map(m => m.clubs as Club);
-    setMyClubs(clubs);
-    setOfficerClubs(((memberRes.data || []) as { clubs: Club; role: string }[]).filter(m => ['president', 'officer', 'admin'].includes(m.role) && m.clubs).map(m => m.clubs as Club));
+    const members = (memberRes.data || []) as { club_id: string; role: string }[];
+    if (members.length > 0) {
+      const clubIds = members.map(m => m.club_id);
+      const { data: clubsData } = await supabase.from('clubs').select('*').in('id', clubIds).eq('is_active', true);
+      const clubs = (clubsData as Club[]) || [];
+      setMyClubs(clubs);
+      const officerClubIds = new Set(members.filter(m => ['president', 'officer', 'admin'].includes(m.role)).map(m => m.club_id));
+      setOfficerClubs(clubs.filter(c => officerClubIds.has(c.id)));
+    } else {
+      setMyClubs([]);
+      setOfficerClubs([]);
+    }
     setLoading(false);
   }
 
@@ -106,7 +116,7 @@ export function Events({ searchQuery }: EventsProps) {
             </button>
           ))}
         </div>
-        {officerClubs.length > 0 && (
+        {user && (
           <Button onClick={() => setCreateOpen(true)} size="sm">
             <Plus size={14} /> Create Event
           </Button>
@@ -173,7 +183,7 @@ export function Events({ searchQuery }: EventsProps) {
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Club *</label>
             <select value={newEvent.club_id} onChange={e => setNewEvent(p => ({ ...p, club_id: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition bg-white">
               <option value="">Select a club...</option>
-              {officerClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {allClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>

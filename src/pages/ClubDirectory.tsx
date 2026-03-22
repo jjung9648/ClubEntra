@@ -49,10 +49,14 @@ export function ClubDirectory({ onNavigate, searchQuery }: ClubDirectoryProps) {
     setLoading(false);
   }
 
-  async function handleApply(clubId: string) {
+  async function handleJoin(clubId: string) {
     if (!user) return;
-    const { error } = await supabase.from('membership_applications').insert({ club_id: clubId, user_id: user.id, message: '' });
-    if (!error) await loadClubs();
+    const { error } = await supabase.from('club_members').insert({ club_id: clubId, user_id: user.id, role: 'member', status: 'active' });
+    if (!error) {
+      const current = clubs.find(c => c.id === clubId)?.member_count ?? 0;
+      await supabase.from('clubs').update({ member_count: current + 1 }).eq('id', clubId);
+      await loadClubs();
+    }
   }
 
   async function handleCreateClub() {
@@ -156,10 +160,10 @@ export function ClubDirectory({ onNavigate, searchQuery }: ClubDirectoryProps) {
                   </button>
                   {!myClubIds.has(club.id) && (
                     <button
-                      onClick={() => handleApply(club.id)}
+                      onClick={() => handleJoin(club.id)}
                       className="flex-1 text-sm font-medium text-white bg-sky-600 rounded-lg px-3 py-1.5 hover:bg-sky-700 transition-colors"
                     >
-                      Apply
+                      Join
                     </button>
                   )}
                   {myClubIds.has(club.id) && (

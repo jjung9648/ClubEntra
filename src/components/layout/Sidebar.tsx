@@ -12,9 +12,10 @@ interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   isOfficer?: boolean;
+  isAdmin?: boolean;
 }
 
-const navItems: { icon: React.ElementType; label: string; page: Page; officerOnly?: boolean }[] = [
+const navItems: { icon: React.ElementType; label: string; page: Page; officerOnly?: boolean; adminOnly?: boolean }[] = [
   { icon: LayoutDashboard, label: 'Dashboard', page: 'dashboard' },
   { icon: Compass, label: 'Discover Clubs', page: 'directory' },
   { icon: Users, label: 'My Clubs', page: 'my-clubs' },
@@ -25,13 +26,17 @@ const navItems: { icon: React.ElementType; label: string; page: Page; officerOnl
   { icon: Handshake, label: 'Collaborations', page: 'collaborations' },
   { icon: Shield, label: 'Officer Tools', page: 'officer', officerOnly: true },
   { icon: BarChart3, label: 'Analytics', page: 'analytics' },
-  { icon: ShieldAlert, label: 'Admin Panel', page: 'admin-home' },
+  { icon: ShieldAlert, label: 'Admin Panel', page: 'admin-home', adminOnly: true },
 ];
 
-export function Sidebar({ currentPage, onNavigate, collapsed, onToggle, isOfficer }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, collapsed, onToggle, isOfficer, isAdmin }: SidebarProps) {
   const { profile, signOut } = useAuth();
 
-  const visibleItems = navItems.filter(item => !item.officerOnly || isOfficer);
+  const visibleItems = navItems.filter(item => {
+    if (item.officerOnly && !isOfficer) return false;
+    if (item.adminOnly && !isAdmin) return false;
+    return true;
+  });
 
   return (
     <aside className={`fixed left-0 top-0 h-full z-30 flex flex-col bg-slate-900 text-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>

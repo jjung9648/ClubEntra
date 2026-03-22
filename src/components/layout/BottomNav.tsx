@@ -1,4 +1,4 @@
-import { Home, MessageCircle, User } from 'lucide-react';
+import { Home, Calendar, Megaphone, MessageCircle, User } from 'lucide-react';
 import type { Page } from '../../lib/types';
 
 interface BottomNavProps {
@@ -8,6 +8,8 @@ interface BottomNavProps {
 
 const NAV_ITEMS: { icon: React.ElementType; label: string; page: Page }[] = [
   { icon: Home, label: 'Home', page: 'home' },
+  { icon: Calendar, label: 'Events', page: 'events' },
+  { icon: Megaphone, label: 'Announce', page: 'announcements' },
   { icon: MessageCircle, label: 'Chat', page: 'admin-chat' },
   { icon: User, label: 'Profile', page: 'profile' },
 ];

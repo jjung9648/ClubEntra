@@ -31,13 +31,14 @@ import { CreateUser } from './pages/admin/CreateUser';
 import { EditUsers } from './pages/admin/EditUsers';
 import { UserRoleList } from './pages/admin/UserRoleList';
 import { EditClubFunds } from './pages/admin/EditClubFunds';
+import { BottomNav } from './components/layout/BottomNav';
 import type { Page, Club } from './lib/types';
 import { supabase } from './lib/supabase';
 
 type AuthScreen = 'welcome' | 'login' | 'signup' | 'forgot-password';
 
 function AppInner() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [authScreen, setAuthScreen] = useState<AuthScreen>('welcome');
   const [selectedClubId, setSelectedClubId] = useState<string | undefined>();
@@ -49,6 +50,7 @@ function AppInner() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOfficer, setIsOfficer] = useState(false);
+  const isAdmin = profile?.student_role === 'admin';
 
   useEffect(() => {
     if (!user) return;
@@ -116,7 +118,8 @@ function AppInner() {
   }
 
   if (currentPage === 'home') {
-    return <MobileHome onNavigate={handleNavigate} />;
+    setCurrentPage('dashboard');
+    return null;
   }
 
   if (currentPage === 'club-funds' && selectedClubId) {
@@ -173,6 +176,7 @@ function AppInner() {
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(p => !p)}
           isOfficer={isOfficer}
+          isAdmin={isAdmin}
         />
       </div>
 
@@ -183,8 +187,12 @@ function AppInner() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           showSearch={showSearch}
+          onNavigate={handleNavigate}
         />
-        <main className="flex-1 overflow-y-auto">
+        <div className="lg:hidden">
+          <BottomNav currentPage={currentPage} onNavigate={handleNavigate} />
+        </div>
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           {currentPage === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
           {currentPage === 'directory' && <ClubDirectory onNavigate={handleNavigate} searchQuery={searchQuery} />}
           {currentPage === 'club-detail' && selectedClubId && (
@@ -199,27 +207,38 @@ function AppInner() {
           {currentPage === 'officer' && <OfficerDashboard />}
           {currentPage === 'analytics' && <Analytics />}
           {currentPage === 'profile' && <Profile />}
-          {currentPage === 'admin-home' && <AdminHome onNavigate={handleNavigate} />}
-          {currentPage === 'admin-users' && <ManageUsers onNavigate={handleNavigate} />}
-          {currentPage === 'admin-clubs' && (
+          {currentPage === 'admin-home' && isAdmin && <AdminHome onNavigate={handleNavigate} />}
+          {currentPage === 'admin-users' && isAdmin && <ManageUsers onNavigate={handleNavigate} />}
+          {currentPage === 'admin-clubs' && isAdmin && (
             <ManageClubs
               onNavigate={handleNavigate}
               onEditClubFunds={club => { setSelectedAdminClub(club); handleNavigate('admin-edit-club-funds'); }}
             />
           )}
-          {currentPage === 'admin-edit-club-funds' && selectedAdminClub && (
+          {currentPage === 'admin-edit-club-funds' && isAdmin && selectedAdminClub && (
             <EditClubFunds
               club={selectedAdminClub}
               onNavigate={handleNavigate}
               onSaved={updated => setSelectedAdminClub(updated)}
             />
           )}
-          {currentPage === 'admin-chat' && <AdminChat onNavigate={handleNavigate} />}
-          {currentPage === 'admin-create-user' && <CreateUser onNavigate={handleNavigate} />}
-          {currentPage === 'admin-edit-users' && <EditUsers onNavigate={handleNavigate} />}
-          {currentPage === 'admin-officers' && <UserRoleList role="officer" onNavigate={handleNavigate} />}
-          {currentPage === 'admin-advisors' && <UserRoleList role="advisor" onNavigate={handleNavigate} />}
-          {currentPage === 'admin-members' && <UserRoleList role="member" onNavigate={handleNavigate} />}
+          {currentPage === 'admin-chat' && isAdmin && <AdminChat onNavigate={handleNavigate} />}
+          {currentPage === 'admin-create-user' && isAdmin && <CreateUser onNavigate={handleNavigate} />}
+          {currentPage === 'admin-edit-users' && isAdmin && <EditUsers onNavigate={handleNavigate} />}
+          {currentPage === 'admin-officers' && isAdmin && <UserRoleList role="officer" onNavigate={handleNavigate} />}
+          {currentPage === 'admin-advisors' && isAdmin && <UserRoleList role="advisor" onNavigate={handleNavigate} />}
+          {currentPage === 'admin-members' && isAdmin && <UserRoleList role="member" onNavigate={handleNavigate} />}
+          {currentPage.startsWith('admin-') && !isAdmin && (
+            <div className="flex items-center justify-center h-full p-12">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-rose-500 text-2xl font-bold">!</span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">Access Denied</h2>
+                <p className="text-slate-500 text-sm">You don't have permission to access the Admin Panel.</p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

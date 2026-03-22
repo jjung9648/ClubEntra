@@ -66,7 +66,7 @@ export interface Profile {
   phone: string;
   username: string;
   student_id: string;
-  student_role: 'member' | 'officer';
+  student_role: 'member' | 'officer' | 'admin';
   club_name: string;
   created_at: string;
   updated_at: string;

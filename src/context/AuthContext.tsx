@@ -55,22 +55,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUp(email: string, password: string, data: Partial<Profile>) {
-    const { data: authData, error } = await supabase.auth.signUp({ email, password });
+    const { data: authData, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: data.full_name || '',
+          major: data.major || '',
+          graduation_year: data.graduation_year || null,
+          university: data.university || '',
+          bio: data.bio || '',
+          username: data.username || '',
+          student_id: data.student_id || '',
+          student_role: data.student_role || 'member',
+          club_name: data.club_name || '',
+        },
+      },
+    });
     if (error) return { error };
     if (authData.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: authData.user.id,
-        full_name: data.full_name || '',
-        major: data.major || '',
-        graduation_year: data.graduation_year || null,
-        university: data.university || '',
-        bio: data.bio || '',
-        username: data.username || '',
-        student_id: data.student_id || '',
-        student_role: data.student_role || 'member',
-        club_name: data.club_name || '',
-      });
-      if (profileError) return { error: profileError };
       await fetchProfile(authData.user.id);
     }
     return { error: null };

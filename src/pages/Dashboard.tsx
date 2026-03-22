@@ -20,7 +20,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   useEffect(() => {
     if (!user) return;
     async function load() {
-      const [clubsRes, eventsRes, announcementsRes] = await Promise.all([
+      const [clubsRes, clubsCountRes, eventsRes, eventsCountRes, announcementsRes, announcementsCountRes] = await Promise.all([
         supabase
           .from('club_members')
           .select('clubs(*)')
@@ -28,16 +28,28 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           .eq('status', 'active')
           .limit(6),
         supabase
+          .from('club_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user!.id)
+          .eq('status', 'active'),
+        supabase
           .from('events')
           .select('*')
           .gte('start_time', new Date().toISOString())
           .order('start_time', { ascending: true })
           .limit(5),
         supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .gte('start_time', new Date().toISOString()),
+        supabase
           .from('announcements')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(4),
+        supabase
+          .from('announcements')
+          .select('id', { count: 'exact', head: true }),
       ]);
 
       const clubs = (clubsRes.data || []).map((r: { clubs: Club | Club[] }) => Array.isArray(r.clubs) ? r.clubs[0] : r.clubs).filter(Boolean) as Club[];
@@ -45,9 +57,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       setUpcomingEvents((eventsRes.data as Event[]) || []);
       setRecentAnnouncements((announcementsRes.data as Announcement[]) || []);
       setStats({
-        clubs: clubs.length,
-        events: eventsRes.data?.length || 0,
-        announcements: announcementsRes.data?.length || 0,
+        clubs: clubsCountRes.count ?? clubs.length,
+        events: eventsCountRes.count ?? eventsRes.data?.length ?? 0,
+        announcements: announcementsCountRes.count ?? announcementsRes.data?.length ?? 0,
         applications: 0,
       });
       setLoading(false);
@@ -115,12 +127,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-            <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
-              <Icon size={20} className={color} />
+          <div key={label} className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 ${bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <Icon size={16} className={color} />
+              </div>
+              <p className="text-sm font-medium text-slate-500 leading-tight">{label}</p>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{value}</p>
-            <p className="text-sm text-slate-500 mt-0.5">{label}</p>
+            <p className="text-2xl font-bold text-slate-900 text-center">{value}</p>
           </div>
         ))}
       </div>
@@ -200,10 +214,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     <div className="w-8 h-8 bg-gradient-to-br from-sky-400 to-sky-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <span className="text-white text-xs font-bold">{club.name.charAt(0)}</span>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-800 truncate">{club.name}</p>
                       <p className="text-xs text-slate-500 truncate">{club.category}</p>
                     </div>
+                    <span className="text-xs text-slate-400 flex items-center gap-0.5 flex-shrink-0">
+                      <Users size={11} />
+                      {club.member_count ?? 0}
+                    </span>
                   </button>
                 ))}
               </div>
